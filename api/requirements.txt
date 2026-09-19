@@ -1,0 +1,15 @@
+# Dependencies for the Vercel deployment (the @vercel/python builder reads the
+# requirements.txt adjacent to the handler, not the one at the repo root).
+#
+# Deliberately EXCLUDES rasterio, scipy, xarray, rioxarray and scikit-image:
+# those are only needed by the SAR detection pipeline, which cannot run on
+# serverless (bundle size and execution time) and is not deployed here.
+# Use the root requirements.txt to run the full stack.
+fastapi>=0.115,<1.0
+pydantic>=2.7,<3.0
+pydantic-settings>=2.3,<3.0
+SQLAlchemy>=2.0,<3.0
+GeoAlchemy2>=0.15,<1.0
+psycopg[binary]>=3.1,<4.0
+httpx>=0.27,<1.0
+websockets>=12.0

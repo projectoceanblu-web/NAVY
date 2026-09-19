@@ -1,0 +1,162 @@
+:root {
+  --bg: #0d1520;
+  --panel: #152232;
+  --ink: #e8eef6;
+  --muted: #8ba0b8;
+  --line: #24384f;
+  --dark: #f2545b;
+  --fishing: #ffb02e;
+  --presence: #4a9eff;
+  --anomaly: #a371f7;
+  --vessel: #3fb950;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  display: flex;
+  height: 100vh;
+  font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+}
+
+#sidebar {
+  width: 330px;
+  flex: 0 0 330px;
+  overflow-y: auto;
+  padding: 18px;
+  background: var(--panel);
+  border-right: 1px solid var(--line);
+}
+
+#map { flex: 1; height: 100vh; background: #08101a; position: relative; }
+
+h1 { margin: 0; font-size: 20px; letter-spacing: 0.3px; }
+h2 { margin: 0 0 10px; font-size: 12px; text-transform: uppercase;
+     letter-spacing: 0.8px; color: var(--muted); }
+.subtitle { margin: 4px 0 8px; color: var(--muted); font-size: 12px; }
+
+.livebadge {
+  margin: 0 0 16px; font-size: 11px; color: var(--muted);
+  display: flex; align-items: center; gap: 6px;
+}
+.livebadge .dot {
+  width: 7px; height: 7px; border-radius: 50%; background: #3fb950;
+  box-shadow: 0 0 0 0 rgba(63, 185, 80, 0.7);
+  animation: pulse 2s infinite;
+}
+@keyframes pulse {
+  70% { box-shadow: 0 0 0 7px rgba(63, 185, 80, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(63, 185, 80, 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .livebadge .dot { animation: none; }
+}
+
+.panel { padding: 14px 0; border-top: 1px solid var(--line); }
+.panel label { display: block; margin-bottom: 8px; cursor: pointer; }
+.panel select, .panel button {
+  width: 100%; margin-top: 4px; padding: 8px;
+  background: #0e1a27; color: var(--ink);
+  border: 1px solid var(--line); border-radius: 5px; font: inherit;
+}
+.panel button { margin-top: 12px; cursor: pointer; background: #1d3b57; }
+.panel button:hover { background: #26506f; }
+.panel button[aria-busy="true"] { opacity: 0.6; cursor: progress; }
+
+.swatch {
+  display: inline-block; width: 10px; height: 10px;
+  border-radius: 50%; margin: 0 6px 0 2px; vertical-align: middle;
+}
+.swatch.dark { background: var(--dark); }
+.swatch.fishing { background: var(--fishing); }
+.swatch.presence { background: var(--presence); }
+.swatch.anomaly { background: var(--anomaly); }
+.swatch.vessel { background: var(--vessel); }
+
+#stats { margin: 0; display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; }
+#stats dt { color: var(--muted); }
+#stats dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+
+.caveat p { color: var(--muted); font-size: 12px; margin: 0 0 8px; }
+.caveat strong { color: var(--ink); }
+
+/* Floating frames over the map canvas. */
+.map-frame {
+  position: absolute; z-index: 500;
+  background: rgba(21, 34, 50, 0.92);
+  border: 1px solid var(--line); border-radius: 6px;
+  padding: 7px 11px; font-size: 11.5px; color: var(--ink);
+  backdrop-filter: blur(3px); pointer-events: none;
+}
+#coords { bottom: 14px; right: 14px; font-variant-numeric: tabular-nums; }
+#legend { top: 14px; left: 14px; line-height: 1.9; }
+
+#toast {
+  position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
+  padding: 10px 16px; border-radius: 6px; background: #4a1d20;
+  border: 1px solid var(--dark); color: var(--ink); max-width: 60vw;
+  opacity: 0; pointer-events: none; transition: opacity 0.25s; z-index: 1000;
+}
+#toast.show { opacity: 1; }
+
+/* Without a basemap the map pane is bare, so give it a graticule so the
+   vector layers still read as a chart rather than floating in space. */
+body.no-basemap #map {
+  background-image:
+    linear-gradient(rgba(74, 158, 255, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(74, 158, 255, 0.07) 1px, transparent 1px);
+  background-size: 60px 60px;
+}
+
+/* Leaflet controls, themed to match the panel. */
+.leaflet-control-layers, .leaflet-bar a, .leaflet-control-scale-line {
+  background: var(--panel); color: var(--ink); border-color: var(--line);
+}
+.leaflet-control-layers-expanded { padding: 10px 12px; font-size: 12.5px; }
+.leaflet-control-layers-separator { border-top-color: var(--line); }
+.leaflet-bar a { color: var(--ink); }
+.leaflet-bar a:hover { background: #26506f; color: var(--ink); }
+.leaflet-control-scale-line { border-color: var(--muted); color: var(--ink); }
+.leaflet-control-attribution {
+  background: rgba(21, 34, 50, 0.85) !important; color: var(--muted) !important;
+}
+.leaflet-control-attribution a { color: var(--presence) !important; }
+
+.leaflet-popup-content-wrapper, .leaflet-popup-tip {
+  background: var(--panel); color: var(--ink);
+}
+.leaflet-popup-content { margin: 12px 14px; font-size: 13px; }
+.leaflet-popup-content h3 { margin: 0 0 6px; font-size: 14px; text-transform: capitalize; }
+.leaflet-popup-content table { border-collapse: collapse; }
+.leaflet-popup-content td { padding: 1px 0; }
+.leaflet-popup-content td:first-child { color: var(--muted); padding-right: 12px; }
+
+@media (max-width: 860px) {
+  body { flex-direction: column; height: auto; }
+  #sidebar { width: 100%; flex: none; border-right: none; border-bottom: 1px solid var(--line); }
+  #map { height: 65vh; }
+}
+
+.hint { color: var(--muted); font-size: 11.5px; margin: 10px 0 0; }
+
+/* Vessel markers are SVG arrows rotated to course, so the icon container
+   itself must not paint a background or border. */
+.vessel-icon { background: none; border: none; }
+.vessel-icon svg { display: block; transform-origin: 50% 50%; }
+
+.route-btn {
+  margin-top: 10px; width: 100%; padding: 6px 8px; cursor: pointer;
+  background: #1d3b57; color: var(--ink);
+  border: 1px solid var(--line); border-radius: 5px; font: inherit; font-size: 12px;
+}
+.route-btn:hover { background: #26506f; }
+
+/* An empty AIS layer must never read as empty water — say why it is empty. */
+.coverage-note {
+  margin: 12px 0 0; padding: 9px 10px;
+  background: #3a2e14; border: 1px solid var(--fishing); border-radius: 5px;
+  color: #e8dcc0; font-size: 11.5px; line-height: 1.5;
+}

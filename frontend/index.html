@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>BoB Sentinel</title>
+<!-- Leaflet is vendored under frontend/vendor/ rather than pulled from a CDN:
+     this tool is meant to run on a vessel or in a coastal facility where
+     outbound internet is unreliable or absent, and a CDN dependency would
+     also be a supply-chain surface on a surveillance system. -->
+<link rel="stylesheet" href="/static/vendor/leaflet/leaflet.css" />
+<link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+<div id="sidebar">
+  <header>
+    <h1>BoB Sentinel</h1>
+    <p class="subtitle">Dark-vessel screening &middot; Bangladesh EEZ</p>
+    <p class="livebadge"><span class="dot"></span> Live data &middot; Global Fishing Watch</p>
+  </header>
+
+  <section class="panel">
+    <h2>Live layers</h2>
+    <label><input type="checkbox" id="layer-eez" checked /> EEZ boundary</label>
+    <label><input type="checkbox" id="layer-sar" checked />
+      <span class="swatch dark"></span> SAR dark detections</label>
+    <label><input type="checkbox" id="layer-fishing" />
+      <span class="swatch fishing"></span> Apparent fishing effort</label>
+    <label><input type="checkbox" id="layer-presence" />
+      <span class="swatch presence"></span> AIS vessel presence</label>
+    <label><input type="checkbox" id="layer-events" checked />
+      <span class="swatch anomaly"></span> Encounters &amp; loitering</label>
+    <label><input type="checkbox" id="layer-vessels" checked />
+      <span class="swatch vessel"></span> Live AIS vessels</label>
+    <p class="hint">Click a vessel to draw its full route. Right-click the map
+    to clear the selection.</p>
+  </section>
+
+  <section class="panel">
+    <h2>Time window</h2>
+    <label>Look-back
+      <select id="days">
+        <option value="7">7 days</option>
+        <option value="30" selected>30 days</option>
+        <option value="90">90 days</option>
+        <option value="180">180 days</option>
+        <option value="365">1 year</option>
+      </select>
+    </label>
+    <button id="refresh">Refresh live data</button>
+  </section>
+
+  <section class="panel">
+    <h2>Status</h2>
+    <dl id="stats"><dt>Loading…</dt><dd></dd></dl>
+    <p id="ais-note" class="coverage-note" style="display:none"></p>
+  </section>
+
+  <section class="panel caveat">
+    <h2>Read this first</h2>
+    <p>These are <strong>probabilistic screening outputs, not evidence of
+    illegal fishing.</strong> A SAR detection with no AIS match may be a vessel
+    exempt from carrying AIS, a failed transponder, or sea-state clutter.</p>
+    <p>GFW's SAR layer lags real time by about 5 days and is
+    non-commercial use only.</p>
+  </section>
+</div>
+
+<div id="map">
+  <div id="coords" class="map-frame">—</div>
+  <div id="legend" class="map-frame"></div>
+</div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script src="/static/vendor/leaflet/leaflet.js"></script>
+<script src="/static/app.js"></script>
+</body>
+</html>
