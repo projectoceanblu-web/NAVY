@@ -1,0 +1,28 @@
+[project]
+name = "bob-sentinel"
+version = "0.1.0"
+description = "Dark-vessel / IUU screening MVP for the Bay of Bengal (Bangladesh EEZ)"
+requires-python = ">=3.11"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["bob_sentinel*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+filterwarnings = ["ignore::DeprecationWarning"]
+markers = [
+  "integration: needs a live PostGIS database (deselect with '-m \"not integration\"')",
+  "network: needs outbound network access and real credentials",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B"]
+ignore = ["B008"]  # FastAPI's Depends() in defaults is the documented idiom

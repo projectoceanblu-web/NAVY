@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>BoB Sentinel</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+<div id="sidebar">
+  <header>
+    <h1>BoB Sentinel</h1>
+    <p class="subtitle">Dark-vessel screening &middot; Bangladesh EEZ</p>
+  </header>
+
+  <section class="panel">
+    <h2>Layers</h2>
+    <label><input type="checkbox" id="layer-eez" checked /> EEZ boundary</label>
+    <label><input type="checkbox" id="layer-ais" checked /> AIS vessels</label>
+    <label><input type="checkbox" id="layer-matched" checked />
+      <span class="swatch matched"></span> Matched detections</label>
+    <label><input type="checkbox" id="layer-dark" checked />
+      <span class="swatch dark"></span> Dark detections</label>
+    <label><input type="checkbox" id="layer-indeterminate" checked />
+      <span class="swatch indeterminate"></span> Indeterminate</label>
+    <label><input type="checkbox" id="layer-anomalies" />
+      <span class="swatch anomaly"></span> AIS anomalies</label>
+  </section>
+
+  <section class="panel">
+    <h2>Window</h2>
+    <label>AIS look-back
+      <select id="ais-minutes">
+        <option value="60">1 hour</option>
+        <option value="360" selected>6 hours</option>
+        <option value="1440">24 hours</option>
+        <option value="10080">7 days</option>
+      </select>
+    </label>
+    <label>Detections
+      <select id="det-days">
+        <option value="7">7 days</option>
+        <option value="30" selected>30 days</option>
+        <option value="90">90 days</option>
+      </select>
+    </label>
+    <button id="refresh">Refresh</button>
+  </section>
+
+  <section class="panel">
+    <h2>Status</h2>
+    <dl id="stats"><dt>Loading…</dt><dd></dd></dl>
+  </section>
+
+  <section class="panel caveat">
+    <h2>Read this first</h2>
+    <p>These are <strong>probabilistic screening outputs, not evidence of
+    illegal fishing.</strong> A SAR detection with no AIS match may be a vessel
+    exempt from carrying AIS, a failed transponder, or sea-state clutter.</p>
+    <p><strong>Indeterminate</strong> means no AIS vessel at all was reporting
+    nearby, so the absence of a match tells us about the feed's coverage, not
+    about the vessel.</p>
+  </section>
+</div>
+
+<div id="map"></div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="/static/app.js"></script>
+</body>
+</html>

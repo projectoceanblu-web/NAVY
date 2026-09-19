@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+htmlcov/
+.coverage
+
+# Secrets — never commit real credentials
+.env
+*.env
+!.env.example
+
+# Data products (large binaries: Sentinel-1 GRD zips, GeoTIFFs, EEZ geopackages)
+data/
+!data/.gitkeep
+*.SAFE/
+*.tif
+*.tiff
+*.zip
+*.gpkg
+*.shp
+*.dbf
+*.shx
+*.prj
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
