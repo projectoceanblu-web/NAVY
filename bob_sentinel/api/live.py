@@ -168,35 +168,54 @@ def live_events(
 # --- gridded activity ------------------------------------------------------
 
 
+def _expand(item: Any) -> list[dict]:
+    """Expand one report entry into detection rows.
+
+    The live v3 shape keys the rows by dataset id, one level deeper than an
+    entry list suggests::
+
+        {"entries": [{"public-global-sar-presence:v4.0": [{lat, lon, ...}]}]}
+
+    So an entry that is a dict of lists is a container, not a row — treating
+    it as a row is how this silently produced an empty layer.
+    """
+    if not isinstance(item, dict):
+        return []
+    if isinstance(item.get("entries"), list):
+        return [x for x in item["entries"] if isinstance(x, dict)]
+
+    nested: list[dict] = []
+    for value in item.values():
+        if isinstance(value, list):
+            nested.extend(x for x in value if isinstance(x, dict))
+    if nested:
+        return nested
+
+    # A bare row: only accept it if it actually carries a position.
+    return [item] if ("lat" in item or "latitude" in item) else []
+
+
 def _flatten_report(payload: Any) -> list[dict]:
-    """GFW report payloads nest the grid differently across versions."""
+    """Normalise a GFW report payload into a flat list of detection rows."""
     if isinstance(payload, list):
-        rows: list[dict] = []
-        for item in payload:
-            if isinstance(item, dict) and isinstance(item.get("entries"), list):
-                rows.extend(x for x in item["entries"] if isinstance(x, dict))
-            elif isinstance(item, dict):
-                rows.append(item)
-        return rows
+        return [row for item in payload for row in _expand(item)]
     if isinstance(payload, dict):
         for key in ("entries", "data", "result"):
             value = payload.get(key)
             if isinstance(value, list):
-                out: list[dict] = []
-                for item in value:
-                    if isinstance(item, dict) and isinstance(item.get("entries"), list):
-                        out.extend(x for x in item["entries"] if isinstance(x, dict))
-                    elif isinstance(item, dict):
-                        out.append(item)
-                return out
+                return [row for item in value for row in _expand(item)]
             if isinstance(value, dict):
-                nested: list[dict] = []
-                for inner in value.values():
-                    if isinstance(inner, list):
-                        nested.extend(x for x in inner if isinstance(x, dict))
-                if nested:
-                    return nested
+                rows = _expand(value)
+                if rows:
+                    return rows
     return []
+
+
+def _text(value: Any) -> str | None:
+    """GFW returns empty strings rather than nulls for unknown identity."""
+    if isinstance(value, str):
+        return value.strip() or None
+    return value if value is not None else None
 
 
 def _grid_feature(cell: dict, value_keys: tuple[str, ...]) -> GeoJSONFeature | None:
@@ -204,12 +223,24 @@ def _grid_feature(cell: dict, value_keys: tuple[str, ...]) -> GeoJSONFeature | N
     lon = _num(_first(cell, "lon", "lng", "longitude", "cell_lon"))
     if lat is None or lon is None:
         return None
-    value = _num(_first(cell, *value_keys))
+
+    name = _text(cell.get("shipName"))
+    mmsi = _text(cell.get("mmsi"))
     return GeoJSONFeature(
         geometry={"type": "Point", "coordinates": [lon, lat]},
         properties={
-            "value": value,
+            "value": _num(_first(cell, *value_keys)),
             "date": _first(cell, "date", "timestamp", "time"),
+            # Identity fields come back blank for detections GFW could not
+            # reconcile with an AIS broadcast — which is the whole point here.
+            "vessel_name": name,
+            "mmsi": mmsi,
+            "flag": _text(cell.get("flag")),
+            "vessel_type": _text(cell.get("vesselType")),
+            "geartype": _text(cell.get("geartype")),
+            "identified": bool(name or mmsi),
+            "first_seen": _text(cell.get("entryTimestamp")),
+            "last_seen": _text(cell.get("exitTimestamp")),
             "source": "Global Fishing Watch",
         },
     )
@@ -318,13 +349,22 @@ def live_diagnostics(settings: Settings = Depends(get_settings)) -> dict:
                 payload = call()
                 rows = (_flatten_report(payload) if name == "sar_report"
                         else _flatten_events(payload))
+                sample = rows[0] if rows else None
+                if isinstance(sample, dict):
+                    # Echo scalars only: a nested container here once made this
+                    # response a megabyte, which defeats a diagnostic endpoint.
+                    sample = {
+                        k: v
+                        for k, v in sample.items()
+                        if not isinstance(v, (list, dict))
+                    }
                 out[name] = {
                     "ok": True,
                     "envelope_type": type(payload).__name__,
                     "envelope_keys": sorted(payload)[:12] if isinstance(payload, dict) else None,
                     "row_count": len(rows),
                     "sample_row_keys": sorted(rows[0])[:20] if rows else None,
-                    "sample_row": rows[0] if rows else None,
+                    "sample_row": sample,
                 }
             except Exception as exc:  # noqa: BLE001 — diagnostics must not raise
                 out[name] = {"ok": False, "error": str(exc)[:400]}

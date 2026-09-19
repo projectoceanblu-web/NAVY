@@ -187,10 +187,23 @@ async function loadGrid(path, group, color, unitLabel, days) {
         `<h3>${unitLabel}</h3>` +
           table([
             ['Value', p.value != null ? p.value.toFixed(2) : null],
-            ['Date', p.date],
+            ['Identified', p.identified ? 'yes — matched to AIS' : 'no AIS identity'],
+            ['Vessel', p.vessel_name],
+            ['MMSI', p.mmsi],
+            ['Flag', p.flag],
+            ['Type', p.vessel_type],
+            ['Gear', p.geartype],
+            ['Window', p.date],
+            ['First seen', p.first_seen],
+            ['Last seen', p.last_seen],
             ['Position', `${lat.toFixed(3)}, ${lon.toFixed(3)}`],
             ['Source', p.source],
-          ])
+          ]) +
+          (p.identified === false
+            ? '<p style="color:#8ba0b8;font-size:11px;margin:8px 0 0">' +
+              'Radar detection with no AIS identity attached. Screening ' +
+              'signal only — not evidence of illegal activity.</p>'
+            : '')
       )
       .addTo(group);
   });
