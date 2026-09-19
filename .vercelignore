@@ -1,0 +1,24 @@
+# Keep the serverless bundle to the read-only API and map.
+#
+# The root requirements.txt pulls rasterio, scipy and scikit-image for the SAR
+# pipeline. Vercel's Python builder discovers requirements.txt by convention,
+# so leaving it in the upload makes it a candidate for the function install —
+# which either blows the 250 MB bundle limit or wins over the slim
+# api/requirements.txt. Excluding it here leaves exactly one candidate.
+requirements.txt
+requirements-dev.txt
+
+# Not needed at runtime.
+tests/
+docs/
+scripts/
+db/
+data/
+.venv/
+Dockerfile
+docker-compose.yml
+pyproject.toml
+
+# 1.6 MB of vendored Swagger UI; /docs degrades gracefully without it and the
+# hosted deployment can reach a CDN anyway.
+frontend/vendor/swagger-ui/
