@@ -155,6 +155,29 @@ class GFWClient:
         body = {"region": {"dataset": region_dataset, "id": region_id}}
         return self._request("POST", "/4wings/report", params=params, json=body)
 
+    def presence_report(
+        self,
+        *,
+        dataset: str,
+        start: date | datetime,
+        end: date | datetime,
+        region_id: int = BANGLADESH_EEZ_ID,
+        region_dataset: str = EEZ_REGION_DATASET,
+        spatial_resolution: str = "HIGH",
+        temporal_resolution: str = "DAILY",
+        response_format: str = "JSON",
+    ) -> Any:
+        """Gridded activity for any 4Wings dataset (AIS presence, fishing effort)."""
+        params: list[tuple[str, str]] = [
+            ("spatial-resolution", spatial_resolution),
+            ("temporal-resolution", temporal_resolution),
+            ("datasets[0]", dataset),
+            ("date-range", format_date_range(start, end)),
+            ("format", response_format),
+        ]
+        body = {"region": {"dataset": region_dataset, "id": region_id}}
+        return self._request("POST", "/4wings/report", params=params, json=body)
+
     def stats(
         self,
         *,

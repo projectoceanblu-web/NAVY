@@ -8,10 +8,13 @@ from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from bob_sentinel import __version__
+from bob_sentinel.api.ais_live import router as ais_live_router
+from bob_sentinel.api.live import router as live_router
 from bob_sentinel.api.routes import router
 from bob_sentinel.config import get_settings
 
@@ -64,6 +67,10 @@ def create_app() -> FastAPI:
         description=DESCRIPTION,
         version=__version__,
         lifespan=lifespan,
+        # The stock /docs pulls Swagger UI from a CDN, which leaves the API
+        # documentation blank on an offline or restricted network.  Disabled
+        # here and re-registered below against the vendored assets.
+        docs_url=None,
     )
     app.add_middleware(
         CORSMiddleware,
@@ -72,6 +79,8 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
     app.include_router(router)
+    app.include_router(live_router)
+    app.include_router(ais_live_router)
 
     frontend = Path(__file__).resolve().parent.parent / "frontend"
     if frontend.is_dir():
@@ -80,6 +89,20 @@ def create_app() -> FastAPI:
         @app.get("/", include_in_schema=False)
         def index() -> FileResponse:
             return FileResponse(frontend / "index.html")
+
+    swagger_dir = frontend / "vendor" / "swagger-ui"
+    if swagger_dir.is_dir():
+
+        @app.get("/docs", include_in_schema=False)
+        def swagger_ui():
+            return get_swagger_ui_html(
+                openapi_url=app.openapi_url or "/openapi.json",
+                title=f"{app.title} — API",
+                swagger_js_url="/static/vendor/swagger-ui/swagger-ui-bundle.js",
+                swagger_css_url="/static/vendor/swagger-ui/swagger-ui.css",
+            )
+    else:  # pragma: no cover - only when the vendored assets are absent
+        log.warning("vendored Swagger UI not found; /docs will be unavailable")
 
     return app
 

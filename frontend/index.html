@@ -4,8 +4,11 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>BoB Sentinel</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<!-- Leaflet is vendored under frontend/vendor/ rather than pulled from a CDN:
+     this tool is meant to run on a vessel or in a coastal facility where
+     outbound internet is unreliable or absent, and a CDN dependency would
+     also be a supply-chain surface on a surveillance system. -->
+<link rel="stylesheet" href="/static/vendor/leaflet/leaflet.css" />
 <link rel="stylesheet" href="/static/style.css" />
 </head>
 <body>
@@ -13,40 +16,38 @@
   <header>
     <h1>BoB Sentinel</h1>
     <p class="subtitle">Dark-vessel screening &middot; Bangladesh EEZ</p>
+    <p class="livebadge"><span class="dot"></span> Live data &middot; Global Fishing Watch</p>
   </header>
 
   <section class="panel">
-    <h2>Layers</h2>
+    <h2>Live layers</h2>
     <label><input type="checkbox" id="layer-eez" checked /> EEZ boundary</label>
-    <label><input type="checkbox" id="layer-ais" checked /> AIS vessels</label>
-    <label><input type="checkbox" id="layer-matched" checked />
-      <span class="swatch matched"></span> Matched detections</label>
-    <label><input type="checkbox" id="layer-dark" checked />
-      <span class="swatch dark"></span> Dark detections</label>
-    <label><input type="checkbox" id="layer-indeterminate" checked />
-      <span class="swatch indeterminate"></span> Indeterminate</label>
-    <label><input type="checkbox" id="layer-anomalies" />
-      <span class="swatch anomaly"></span> AIS anomalies</label>
+    <label><input type="checkbox" id="layer-sar" checked />
+      <span class="swatch dark"></span> SAR dark detections</label>
+    <label><input type="checkbox" id="layer-fishing" />
+      <span class="swatch fishing"></span> Apparent fishing effort</label>
+    <label><input type="checkbox" id="layer-presence" />
+      <span class="swatch presence"></span> AIS vessel presence</label>
+    <label><input type="checkbox" id="layer-events" checked />
+      <span class="swatch anomaly"></span> Encounters &amp; loitering</label>
+    <label><input type="checkbox" id="layer-vessels" checked />
+      <span class="swatch vessel"></span> Live AIS vessels</label>
+    <p class="hint">Click a vessel to draw its full route. Right-click the map
+    to clear the selection.</p>
   </section>
 
   <section class="panel">
-    <h2>Window</h2>
-    <label>AIS look-back
-      <select id="ais-minutes">
-        <option value="60">1 hour</option>
-        <option value="360" selected>6 hours</option>
-        <option value="1440">24 hours</option>
-        <option value="10080">7 days</option>
-      </select>
-    </label>
-    <label>Detections
-      <select id="det-days">
+    <h2>Time window</h2>
+    <label>Look-back
+      <select id="days">
         <option value="7">7 days</option>
         <option value="30" selected>30 days</option>
         <option value="90">90 days</option>
+        <option value="180">180 days</option>
+        <option value="365">1 year</option>
       </select>
     </label>
-    <button id="refresh">Refresh</button>
+    <button id="refresh">Refresh live data</button>
   </section>
 
   <section class="panel">
@@ -59,17 +60,18 @@
     <p>These are <strong>probabilistic screening outputs, not evidence of
     illegal fishing.</strong> A SAR detection with no AIS match may be a vessel
     exempt from carrying AIS, a failed transponder, or sea-state clutter.</p>
-    <p><strong>Indeterminate</strong> means no AIS vessel at all was reporting
-    nearby, so the absence of a match tells us about the feed's coverage, not
-    about the vessel.</p>
+    <p>GFW's SAR layer lags real time by about 5 days and is
+    non-commercial use only.</p>
   </section>
 </div>
 
-<div id="map"></div>
+<div id="map">
+  <div id="coords" class="map-frame">—</div>
+  <div id="legend" class="map-frame"></div>
+</div>
 <div id="toast" role="status" aria-live="polite"></div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="/static/vendor/leaflet/leaflet.js"></script>
 <script src="/static/app.js"></script>
 </body>
 </html>
