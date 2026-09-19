@@ -11,6 +11,7 @@ from datetime import UTC, datetime
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
 
 from bob_sentinel.config import Settings, get_settings
 from bob_sentinel.db import get_db
@@ -92,11 +93,31 @@ def test_healthz_reports_unconfigured_credentials(client) -> None:
     assert "GFW_API_TOKEN" in payload["components"]["gfw"]["detail"]
 
 
-def test_healthz_answers_even_when_the_database_is_down(client) -> None:
-    """Liveness must not depend on the thing it is reporting on."""
+def test_healthz_answers_even_when_the_database_is_down(client, monkeypatch) -> None:
+    """Liveness must not depend on the thing it is reporting on.
+
+    The unreachable engine is injected rather than assumed: this test used to
+    rely on no database happening to listen on the default port, so it passed
+    on a dev box and failed in CI, where PostGIS is up. A test about a
+    database being down has to put it down itself.
+    """
+    import bob_sentinel.db as db_module
+
+    unreachable = create_engine(
+        # Port 1 is reserved and never listening, so this refuses immediately
+        # instead of hanging the suite on a connect timeout.
+        "postgresql+psycopg://nobody:nobody@127.0.0.1:1/nonexistent",
+        connect_args={"connect_timeout": 1},
+    )
+    monkeypatch.setattr(db_module, "_engine", unreachable)
+
     response = client.get("/healthz")
     assert response.status_code == 200
-    assert response.json()["components"]["database"]["ok"] is False
+    payload = response.json()
+    assert payload["components"]["database"]["ok"] is False
+    assert payload["status"] == "degraded"
+    # The failure is reported, not swallowed.
+    assert payload["components"]["database"]["detail"]
 
 
 # --- AIS -------------------------------------------------------------------
