@@ -1,0 +1,73 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+concurrency:
+  # A newer push supersedes an in-flight run on the same ref.
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Lint and test
+    runs-on: ubuntu-latest
+
+    services:
+      # The integration tests exercise real PostGIS: geometry round-trips,
+      # ON CONFLICT semantics and NULLS NOT DISTINCT cannot be verified
+      # against a mock, and three real bugs were only caught this way.
+      postgis:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_USER: sentinel
+          POSTGRES_PASSWORD: sentinel
+          POSTGRES_DB: bobsentinel
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U sentinel -d bobsentinel"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Lint
+        run: ruff check bob_sentinel tests scripts api
+
+      - name: Test
+        env:
+          # Present, so the PostGIS integration tests run rather than skip.
+          TEST_DATABASE_URL: postgresql+psycopg://sentinel:sentinel@localhost:5432/bobsentinel
+        run: pytest -q
+
+      - name: Verify the serverless bundle needs no raster stack
+        run: |
+          # The Vercel deployment installs only api/requirements.txt. If the
+          # API ever grows an import of rasterio/scipy/scikit-image, the
+          # function silently fails to boot in production — catch it here.
+          python -m venv /tmp/slim
+          /tmp/slim/bin/pip install --quiet --upgrade pip
+          /tmp/slim/bin/pip install --quiet -r api/requirements.txt
+          /tmp/slim/bin/python -c "
+          import sys; sys.path.insert(0, '.')
+          from api.index import app
+          paths = app.openapi()['paths']
+          assert len(paths) >= 14, f'expected the full API, got {len(paths)} paths'
+          print(f'serverless bundle OK: {len(paths)} routes, no raster stack')
+          "

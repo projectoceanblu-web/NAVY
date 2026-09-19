@@ -29,9 +29,26 @@ tool into a false-accusation machine, which is why the distinction is enforced
 in the data model (`detections.is_dark` is nullable and `NULL` means "unknown"),
 in the API, and on the map.
 
+## Live deployment
+
+**https://bob-sentinel.vercel.app**
+
+The hosted map serves live Global Fishing Watch data over the Bangladesh EEZ —
+Sentinel-1 SAR dark detections, AIS vessel presence, apparent fishing effort,
+and encounter/loitering events — with the GFW token held server-side.
+
+Only the read-only API and map run on Vercel. The SAR pipeline needs GDAL and
+minutes of CPU per scene, and AIS ingestion is a long-lived WebSocket
+consumer; both stay batch/daemon jobs against the same database. See
+[Hosting](#hosting).
+
 ## Quick start
 
-### 1. Run it with synthetic data (no accounts needed)
+### 1. Run it offline with synthetic data (no accounts needed)
+
+Useful for developing the detector and fusion logic without credentials or
+network. It is **not** representative data — see
+[the live deployment](#live-deployment) for real observations.
 
 ```bash
 cp .env.example .env          # defaults are fine for the demo
@@ -116,6 +133,18 @@ Interactive docs at `/docs`. All geometry is GeoJSON (`lon, lat`).
 | `GET /api/regions` | Boundary polygons |
 | `GET /api/gfw/tile/{z}/{x}/{y}` | GFW heatmap tiles, token kept server-side |
 
+Live layers, proxied to Global Fishing Watch per request (token server-side,
+cached 5 minutes because GFW rate-limits per user across all tokens):
+
+| Endpoint | Purpose |
+| --- | --- |
+| `GET /api/live/sar?dark_only=true` | Real Sentinel-1 detections; `dark_only` applies `matched='false'` |
+| `GET /api/live/presence` | Real AIS vessel presence |
+| `GET /api/live/fishing` | Real apparent fishing effort |
+| `GET /api/live/events?types=` | Real encounters, loitering, fishing events |
+| `GET /api/live/diagnostics` | Upstream envelope shapes — for debugging an empty layer |
+| `POST /api/ais/collect?seconds=` | Drain the aisstream feed briefly and persist it |
+
 ## Detection
 
 CA-CFAR compares each pixel against clutter statistics from a surrounding
@@ -170,6 +199,26 @@ if the vessel was being heard reliably beforehand (≥14 positions in the prior
 12 hours). Without that precondition every patchy receiver becomes an
 accusation.
 
+## Hosting
+
+The deployment splits along what serverless can actually do:
+
+| Component | Where | Why |
+| --- | --- | --- |
+| Read-only API + map | Vercel (`api/index.py`) | Stateless and fast |
+| Live GFW layers | Vercel | REST, fits an invocation |
+| PostGIS | Supabase (transaction pooler) | The direct host is IPv6-only on the free tier |
+| SAR detection | Batch, off-Vercel | rasterio/GDAL + scipy; minutes of CPU per scene |
+| AIS ingestion | Daemon, off-Vercel | A persistent WebSocket has no home in a function |
+
+`api/requirements.txt` deliberately excludes rasterio, scipy and
+scikit-image; CI asserts the API still imports without them, because a stray
+import there fails the function at boot in production rather than at build.
+
+For continuous AIS rather than per-request bursts, run
+`python -m bob_sentinel.workers.ais_ingest` against the same database on any
+always-on host.
+
 ## Development
 
 ```bash
@@ -193,9 +242,16 @@ TEST_DATABASE_URL=postgresql+psycopg://sentinel:sentinel@localhost:5432/bobsenti
   filters to `S1C`/`S1D` by default.
 - **CDSE tokens expire in ~10 minutes.** The client refreshes transparently;
   for very long jobs prefer S3 access, whose keys do not expire.
-- **aisstream has no SLA.** It is community-run and coverage thins offshore.
-  The ingester reconnects with jittered backoff, and thin coverage is what the
-  `indeterminate` verdict exists to represent honestly.
+- **aisstream has no coverage in the Bay of Bengal.** Measured 2026-09-19: a
+  global subscription returns ~1,700 messages in 15 s, while the Bangladesh
+  EEZ returns zero — as does the whole bay (5–25°N, 78–100°E). The nearest
+  contributing receivers are around the Malacca Strait. The feed is
+  crowd-contributed from shore stations, so this is a gap in reception, not
+  an absence of vessels, and the collector says so rather than drawing an
+  empty layer that would read as empty water. It is also precisely why an
+  unmatched SAR detection here is reported `indeterminate`, not `dark`.
+  Real vessel tracks over this AOI need a source that covers it — GFW's
+  Vessels API or a satellite-AIS provider.
 - **GFW is non-commercial use only**, rate-limited per user across all tokens,
   and its SAR layer runs to roughly 5 days ago — it is not a live feed.
 - **Geolocation accuracy.** GRD products are georeferenced by GCPs; the
