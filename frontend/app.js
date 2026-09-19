@@ -252,6 +252,7 @@ async function loadEEZ() {
 /* --- live vessels and route selection ----------------------------------- */
 
 let selectedMmsi = null;
+let aisCoverageNote = null;
 const vesselMarkers = new Map();
 
 /* A vessel's heading is worth showing: a triangle oriented to course tells you
@@ -405,6 +406,12 @@ async function refresh() {
     ['Live vessels', async () => {
       const collected = await collectLiveAIS(8);
       const n = await loadVessels(4320);
+      if (collected && collected.coverage) {
+        // An empty AIS layer must not read as empty water.
+        aisCoverageNote = collected.coverage;
+        return n === 0 ? 'no feed coverage' : n;
+      }
+      aisCoverageNote = null;
       return collected ? `${n} (+${collected.positions_written} new fixes)` : n;
     }],
   ];
@@ -423,6 +430,10 @@ async function refresh() {
   });
   rows.push(['Updated', new Date().toISOString().slice(11, 19) + ' UTC']);
   setStats(rows);
+
+  const note = document.getElementById('ais-note');
+  note.textContent = aisCoverageNote || '';
+  note.style.display = aisCoverageNote ? 'block' : 'none';
 
   if (failures.length) {
     console.error(failures);

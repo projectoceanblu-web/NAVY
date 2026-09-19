@@ -153,3 +153,10 @@ body.no-basemap #map {
   border: 1px solid var(--line); border-radius: 5px; font: inherit; font-size: 12px;
 }
 .route-btn:hover { background: #26506f; }
+
+/* An empty AIS layer must never read as empty water — say why it is empty. */
+.coverage-note {
+  margin: 12px 0 0; padding: 9px 10px;
+  background: #3a2e14; border: 1px solid var(--fishing); border-radius: 5px;
+  color: #e8dcc0; font-size: 11.5px; line-height: 1.5;
+}
